@@ -54,9 +54,9 @@ video {
   margin: 0.5rem;
   width: 400px;
   object-fit: cover;
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
-  -moz-transform: rotateY(180deg);
+  /* transform: rotateY(180deg); */
+  /* -webkit-transform: rotateY(180deg); */
+  /* -moz-transform: rotateY(180deg); */
 }
 
 .options {
