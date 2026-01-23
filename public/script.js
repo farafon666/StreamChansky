@@ -98,3 +98,48 @@ socket.on('createMessage', (message, userName) => {
 /*
   ******************************************************************************************************************************
 */
+/*
+  Button-functionality block
+  ******************************************************************************************************************************
+*/
+const showChat = document.querySelector('#showChat');
+const backBtn = document.querySelector('.header__back');
+
+const inviteButton = document.querySelector('#inviteButton');
+const muteButton = document.querySelector('#muteButton');
+const stopVideo = document.querySelector('#stopVideo');
+
+showChat.addEventListener('click', () => {
+  document.querySelector('.main__left').style.display = 'flex';
+  document.querySelector('.main__left').style.flex = '1';
+  document.querySelector('.main__right').style.display = 'none';
+  document.querySelector('.header_back').style.display = 'none';
+});
+
+backBtn.addEventListener('click', () => {
+  document.querySelector('.main__right').style.display = 'flex';
+  document.querySelector('.main__right').style.flex = '1';
+  document.querySelector('.main__left').style.display = 'none';
+  document.querySelector('.header_back').style.display = 'block';
+});
+
+inviteButton.addEventListener('click', () => {
+  prompt('Copy this link and sent it to people you want to invite:', window.location.href);
+});
+
+muteButton.addEventListener('click', () => {
+  const isEnabled = myVideoStream.getAudioTracks()[0].enabled;
+  myVideoStream.getAudioTracks()[0].enabled = !isEnabled;
+  muteButton.innerHTML = isEnabled ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+  muteButton.classList.toggle('background__red');
+});
+
+stopVideo.addEventListener('click', () => {
+  const isEnabled = myVideoStream.getVideoTracks()[0].enabled;
+  myVideoStream.getVideoTracks()[0].enabled = !isEnabled;
+  stopVideo.innerHTML = isEnabled ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
+  stopVideo.classList.toggle('background__red');
+});
+/*
+  ******************************************************************************************************************************
+*/
