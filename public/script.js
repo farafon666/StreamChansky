@@ -1,7 +1,7 @@
 const socket = io('/');
 
 /*
-  Signaling block
+  WebRTC block
   ******************************************************************************************************************************
 */
 const videoGrid = document.getElementById('video-grid');
