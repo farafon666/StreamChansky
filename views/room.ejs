@@ -15,7 +15,10 @@
   <body>
     <div class="header">
       <div class="logo">
-        <h3>StreamChansky</h2>
+        <div class="header__back">
+          <i class="fas fa-angle-left"></i>
+        </div>
+        <h3>StreamChansky</h3>
       </div>
     </div>  
     <div class="main">  
@@ -33,25 +36,25 @@
             <div id="muteButton" class="options__button">
               <i class="fa fa-microphone"></i>
             </div>
-            <div class="options__button background__red">
-              <i class="fa fa-phone" aria-hidden="true"></i>
-            </div>
           </div>
           <div class="options__right">
             <div id="inviteButton" class="options__button">
               <i class="fa fa-user-plus"></i>
+            </div>
+            <div id="showChat" class="options__button">
+              <i class="fa fa-comment-slash"></i>
             </div>
           </div>
         </div>
       </div>
       <div class="main__right">
         <div class="main__chat_window">
-            <div class="messages">
+          <div class="messages">
 
-            </div>
+          </div>
         </div>
         <div class="main__message_container">
-          <input id="chat_message" type="text" autocomplete="off" placeholder="Напишите сообщение...">
+          <input id="chatMessage" type="text" autocomplete="off" placeholder="Напишите сообщение...">
           <div id="send" class="options__button">
             <i class="fa fa-plus" aria-hidden="true"></i>
           </div>
