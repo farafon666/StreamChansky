@@ -109,18 +109,20 @@ const inviteButton = document.querySelector('#inviteButton');
 const muteButton = document.querySelector('#muteButton');
 const stopVideo = document.querySelector('#stopVideo');
 
-showChat.addEventListener('click', () => {
+let isChatExpanded = true;
+
+backBtn.addEventListener('click', () => {
   document.querySelector('.main__left').style.display = 'flex';
   document.querySelector('.main__left').style.flex = '1';
   document.querySelector('.main__right').style.display = 'none';
   document.querySelector('.header_back').style.display = 'none';
 });
 
-backBtn.addEventListener('click', () => {
-  document.querySelector('.main__right').style.display = 'flex';
-  document.querySelector('.main__right').style.flex = '1';
-  document.querySelector('.main__left').style.display = 'none';
-  document.querySelector('.header_back').style.display = 'block';
+showChat.addEventListener('click', () => {
+  document.querySelector('.main__right').style.display = isChatExpanded ? 'none' : 'flex';
+  document.querySelector('.main__left').style.flex = isChatExpanded ? '1.3' : '0.7';
+  showChat.innerHTML = isChatExpanded ? '<i class="fas fa-comment"></i>' : '<i class="fa fa-comment-slash"></i>';
+  isChatExpanded = !isChatExpanded;
 });
 
 inviteButton.addEventListener('click', () => {

@@ -70,6 +70,7 @@ video {
 }
 
 .options__right {
+  display: flex;
   margin-left: auto;
 }
 
@@ -156,10 +157,6 @@ video {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-}
-
-#showChat {
-  display: none;
 }
 
 .header__back {
