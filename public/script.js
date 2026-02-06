@@ -15,11 +15,22 @@ const peer = new Peer({
   path: '/peerjs',
   host: '/',
   port: '3030',
+  config: {
+    // Free public STUN servers provided by Google.
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+    ],
+  },
+  debug: 1 // 0 - без логов, 1 - ошибки, 2 - предупреждения, 3 - подробная информация.
 });
 
 let myVideoStream;
 
-navigator.mediaDevices.getUserMedia({
+navigator.mediaDevices && navigator.mediaDevices.getUserMedia({
   audio: true,
   video: true,
 })
