@@ -1,5 +1,5 @@
 const socket = io('/');
-const mediasoupClient = require('mediasoup-client');
+import { Device } from 'mediasoup-client';
 
 /*
   WebRTC block
@@ -44,7 +44,7 @@ socket.on('connect', () => {
 socket.on('router-capabilities', async (routerRtpCapabilities) => {
   try {
     // Создание устройства mediasoup
-    device = new mediasoupClient.Device();
+    device = new Device();
     await device.load({ routerRtpCapabilities });
 
     // Запрос создания транспортов на сервере
