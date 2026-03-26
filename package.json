@@ -12,7 +12,7 @@
   },
   "license": "ISC",
   "author": "farafon666",
-  "type": "commonjs",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "wp-build": "webpack",

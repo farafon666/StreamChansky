@@ -1,9 +1,11 @@
-const mediasoup = require('mediasoup');
+import mediasoup from 'mediasoup';
 
-module.exports.worker;
-module.exports.rooms = new Map(); // Хранилище комнат: roomId -> { router, producers, consumers, transports, sockets }
+export const rooms = new Map(); // Хранилище комнат: roomId -> { router, producers, consumers, transports, sockets }
+export let worker = null;
 
-// Создание Worker
+/**
+ * Инициализация Worker
+ */
 (async () => {
   worker = await mediasoup.createWorker({
     logLevel: 'warn',
@@ -15,10 +17,19 @@ module.exports.rooms = new Map(); // Хранилище комнат: roomId -> 
   console.log('MediaSoup Worker запущен...');
 })();
 
-// Создание комнаты (router)
-module.exports.createRoom = async (roomId) => {
+/**
+ * Создаёт комнату (router) для указанного идентификатора.
+ * @param {string} roomId - Идентификатор комнаты.
+ * @returns {Promise<import('mediasoup').Router>} Роутер комнаты.
+ * @throws {Error} Если worker ещё не инициализирован.
+ */
+export const createRoom = async (roomId) => {
   if (rooms.has(roomId)) {
     return rooms.get(roomId).router;
+  }
+
+  if (!worker) {
+    throw new Error('MediaSoup worker not initialized yet');
   }
 
   const router = await worker.createRouter({
@@ -52,8 +63,11 @@ module.exports.createRoom = async (roomId) => {
   return router;
 };
 
-// Удаление комнаты (router)
-module.exports.cleanupRoom = (roomId) => {
+/**
+ * Удаляет комнату, если в ней нет активных сокетов.
+ * @param {string} roomId - Идентификатор комнаты.
+ */
+export const cleanupRoom = (roomId) => {
   const room = rooms.get(roomId);
   if (room && room.sockets.size === 0) {
     rooms.delete(roomId);

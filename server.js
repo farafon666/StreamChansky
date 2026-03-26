@@ -1,12 +1,10 @@
-const express = require('express');
-const app = express();
-const fs = require('fs');
-const https = require('https');
-const socketIO = require('socket.io');
-
-const { rooms, createRoom, cleanupRoom } = require('./mediasoup-worker');
-const { createWebRtcTransport } = require('./mediasoup-transport');
-const { v4: uuidv4 } = require('uuid');
+import express from 'express';
+import fs from 'fs';
+import https from 'https';
+import { Server as socketIO } from 'socket.io';
+import { rooms, createRoom, cleanupRoom } from './mediasoup-worker.js';
+import { createWebRtcTransport } from './mediasoup-transport.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Конфигурация HTTPS
 const HTTPS_PORT = 3030;
@@ -16,10 +14,11 @@ const SSL_OPTIONS = {
 };
 
 // Создаем HTTPS сервер
+const app = express();
 const server = https.createServer(SSL_OPTIONS, app);
 
 // Инициализируем Socket.IO с HTTPS сервером
-const io = socketIO(server, {
+const io = new socketIO(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST'],
@@ -46,9 +45,9 @@ io.on('connection', (socket) => {
   let userName = null;
 
   // Подключение пользователя к комнате
-  socket.on('join-room', async ({ roomId, userName }, callback) => {
+  socket.on('join-room', async ({ roomId, userName: joinedUserName }) => {
     currentRoomId = roomId;
-    userName = userName;
+    userName = joinedUserName;
 
     // Получение роутера комнаты
     const router = await createRoom(roomId);
@@ -74,8 +73,8 @@ io.on('connection', (socket) => {
 
     try {
       // Создание транспортов для отправки и приёма
-      const sendTransport = await createWebRtcTransport(room.rotuter);
-      const recvTransport = await createWebRtcTransport(room.rotuter);
+      const sendTransport = await createWebRtcTransport(room.router);
+      const recvTransport = await createWebRtcTransport(room.router);
 
       // Сохранение транспортов по socket.id
       room.transports.set(socket.id, { sendTransport, recvTransport });
