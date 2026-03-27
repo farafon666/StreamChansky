@@ -307,8 +307,8 @@ muteButton.addEventListener('click', () => {
 });
 
 stopVideo.addEventListener('click', () => {
-  const isEnabled = myVideoStream.getVideoTracks()[0].enabled;
-  myVideoStream.getVideoTracks()[0].enabled = !isEnabled;
+  const isEnabled = localStream.getVideoTracks()[0].enabled;
+  localStream.getVideoTracks()[0].enabled = !isEnabled;
   stopVideo.innerHTML = isEnabled
     ? '<i class="fas fa-video-slash"></i>'
     : '<i class="fas fa-video"></i>';
