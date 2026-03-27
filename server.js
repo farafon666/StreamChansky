@@ -214,7 +214,7 @@ io.on('connection', (socket) => {
   // Сообщение в чате
   socket.on('message', (message) => {
     if (currentRoomId && userName) {
-      io.to(currentRoomId).emit('createMessage', message, userName);
+      io.to(currentRoomId).emit('create-message', message, userName);
     }
   });
 

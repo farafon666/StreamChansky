@@ -37,7 +37,7 @@ navigator.mediaDevices &&
 
 // Коннект к комнате после получения потока
 socket.on('connect', () => {
-  socket.emit('join-room', ROOM_ID, user);
+  socket.emit('join-room', { roomId: ROOM_ID, userName: user });
 });
 
 // Обработка события от mediasoup-сервера с RTP-возможностями роутера
@@ -48,7 +48,7 @@ socket.on('router-capabilities', async (routerRtpCapabilities) => {
     await device.load({ routerRtpCapabilities });
 
     // Запрос создания транспортов на сервере
-    socket.emit('create-transport');
+    socket.emit('create-transports');
   } catch (error) {
     console.error('Ошибка при создании транспорта: ', error);
   }
