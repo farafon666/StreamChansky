@@ -114,11 +114,21 @@ io.on('connection', (socket) => {
       const room = rooms.get(currentRoomId);
       if (!room) return callback({ error: 'Комната не найдена.' });
 
-      const transport = room.transports.get(socket.id)?.[
-        transportId === room.transports.get(socket.id)?.sendTransport.id
-          ? 'sendTransport'
-          : 'recvTransport'
-      ];
+      const transports = room.transports.get(socket.id);
+      if (!transports) return callback({ error: 'Транспорты не найдены.' });
+
+      let transport = null;
+      if (
+        transports.sendTransport &&
+        transports.sendTransport.id === transportId
+      ) {
+        transport = transports.sendTransport;
+      } else if (
+        transports.recvTransport &&
+        transports.recvTransport.id === transportId
+      ) {
+        transport = transports.recvTransport;
+      }
 
       if (!transport) return callback({ error: 'Транспорт не найден.' });
 
@@ -237,8 +247,20 @@ io.on('connection', (socket) => {
     // Закрываем транспорты
     const transports = room.transports.get(socket.id);
     if (transports) {
-      if (transports.sendTransport) await transports.sendTransport.close();
-      if (transports.recvTransport) await transports.recvTransport.close();
+      if (transports.sendTransport) {
+        try {
+          await transports.sendTransport.close();
+        } catch (err) {
+          console.error(`Ошибка закрытия sendTransport для ${socket.id}:`, err);
+        }
+      }
+      if (transports.recvTransport) {
+        try {
+          await transports.recvTransport.close();
+        } catch (err) {
+          console.error(`Ошибка закрытия recvTransport для ${socket.id}:`, err);
+        }
+      }
       room.transports.delete(socket.id);
     }
 

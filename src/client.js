@@ -33,10 +33,18 @@ navigator.mediaDevices &&
     })
     .catch((error) => {
       console.error('Ошибка доступа к медиаустройствам: ', error);
+      // Продолжаем без локального потока, но уведомляем пользователя
+      alert(
+        'Не удалось получить доступ к камере/микрофону. Проверьте разрешения.',
+      );
     });
 
 // Коннект к комнате после получения потока
 socket.on('connect', () => {
+  if (!ROOM_ID) {
+    console.error('Не могу подключиться: ROOM_ID отсутствует');
+    return;
+  }
   socket.emit('join-room', { roomId: ROOM_ID, userName: user });
 });
 
@@ -307,8 +315,12 @@ muteButton.addEventListener('click', () => {
 });
 
 stopVideo.addEventListener('click', () => {
-  const isEnabled = localStream.getVideoTracks()[0].enabled;
-  localStream.getVideoTracks()[0].enabled = !isEnabled;
+  if (!localStream) return;
+  const videoTracks = localStream.getVideoTracks();
+  if (videoTracks.length === 0) return;
+  const videoTrack = videoTracks[0];
+  const isEnabled = videoTrack.enabled;
+  videoTrack.enabled = !isEnabled;
   stopVideo.innerHTML = isEnabled
     ? '<i class="fas fa-video-slash"></i>'
     : '<i class="fas fa-video"></i>';
