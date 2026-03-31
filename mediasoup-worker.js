@@ -7,14 +7,18 @@ export let worker = null;
  * Инициализация Worker
  */
 (async () => {
-  worker = await mediasoup.createWorker({
-    logLevel: 'warn',
-    rtcMinPort: 10000,
-    rtcMaxPort: 10100,
-    // dtlsCertificateFile: 'certs/localhost+2.pem',
-    // dtlsPrivateKeyFile: 'certs/localhost+2-key.pem',
-  });
-  console.log('MediaSoup Worker запущен...');
+  try {
+    worker = await mediasoup.createWorker({
+      logLevel: 'warn',
+      rtcMinPort: 10000,
+      rtcMaxPort: 10100,
+      dtlsCertificateFile: 'certs/localhost+2.pem',
+      dtlsPrivateKeyFile: 'certs/localhost+2-key.pem',
+    });
+    console.log('MediaSoup Worker запущен...');
+  } catch (err) {
+    console.error('Не удалось запустить MediaSoup Worker:', err);
+  }
 })();
 
 /**

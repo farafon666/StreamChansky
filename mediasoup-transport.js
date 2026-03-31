@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 /**
  * Создаёт WebRTC транспорт для указанного роутера.
  * @param {import('mediasoup').Router} router - Роутер Mediasoup.
@@ -5,7 +7,10 @@
  * @returns {Promise<import('mediasoup').WebRtcTransport>} Объект транспорта.
  * @throws {Error} Если не удалось создать транспорт.
  */
-export const createWebRtcTransport = async (router, listenIp = '127.0.0.1') => {
+export const createWebRtcTransport = async (
+  router,
+  listenIp = process.env.IP_ADDRESS,
+) => {
   try {
     const transport = await router.createWebRtcTransport({
       listenIps: [{ ip: listenIp, announcedIp: listenIp }],

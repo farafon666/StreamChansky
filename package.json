@@ -22,6 +22,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "dotenv": "^17.3.1",
     "ejs": "^3.1.10",
     "express": "^5.2.1",
     "mediasoup": "^3.19.17",
@@ -34,7 +35,6 @@
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.2",
     "babel-loader": "^10.1.1",
-    "nodemon": "^3.1.11",
     "webpack": "^5.105.4",
     "webpack-cli": "^7.0.2"
   }
