@@ -21,23 +21,27 @@ let producers = []; // Массив продюсеров (аудио, видео
 let consumers = new Map(); // Карта потребителей: ключ - producerId, значение - consumer
 
 // Получение локального медиапотока
-navigator.mediaDevices &&
-  navigator.mediaDevices
-    .getUserMedia({
-      audio: true,
-      video: true,
-    })
-    .then((stream) => {
-      localStream = stream;
-      addVideoStream(myVideo, stream);
-    })
-    .catch((error) => {
-      console.error('Ошибка доступа к медиаустройствам: ', error);
-      // Продолжаем без локального потока, но уведомляем пользователя
-      alert(
-        'Не удалось получить доступ к камере/микрофону. Проверьте разрешения.',
-      );
-    });
+const localStreamPromise = navigator.mediaDevices
+  ? navigator.mediaDevices
+      .getUserMedia({
+        audio: true,
+        video: true,
+      })
+      .then((stream) => {
+        localStream = stream;
+        addVideoStream(myVideo, stream);
+        return stream;
+      })
+      .catch((error) => {
+        console.error('Ошибка доступа к медиаустройствам: ', error);
+        // Продолжаем без локального потока, но уведомляем пользователя
+        alert(
+          'Не удалось получить доступ к камере/микрофону. Проверьте разрешения.',
+        );
+        // Возвращаем null, чтобы последующие вызовы не зависали
+        return null;
+      })
+  : Promise.resolve(null); // Если mediaDevices не поддерживается
 
 // Коннект к комнате после получения потока
 socket.on('connect', () => {
@@ -128,8 +132,14 @@ socket.on(
         );
       });
 
-      // Публикация локальных треков
-      await publishLocalTracks();
+      // Ожидание готовности локального потока перед публикацией
+      const stream = await localStreamPromise;
+      if (stream) {
+        // Публикация локальных треков
+        await publishLocalTracks();
+      } else {
+        console.warn('Локальный поток не доступен, пропускаем публикацию.');
+      }
     } catch (error) {
       console.error('Ошибка при создании транспортов: ', error);
     }
