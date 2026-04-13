@@ -17,8 +17,8 @@
   "scripts": {
     "wp-build": "webpack",
     "wp-watch": "webpack --watch",
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

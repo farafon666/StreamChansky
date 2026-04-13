@@ -63,7 +63,7 @@ export const createRoom = async (roomId) => {
     sockets: new Set(), // socketId
   });
 
-  console.log(`Комната "${roomId}" создана.`);
+  console.log(`Комната ${roomId} создана.`);
   return router;
 };
 
