@@ -24,7 +24,7 @@ export function registerRoomHandlers(socket, io, state) {
     // Отправка клиенту rtpCapabilities роутера
     socket.emit('router-capabilities', router.rtpCapabilities);
     console.log(
-      `Клиент ${socket.id} присоединился к комнате ${roomId} как ${state.userName}`,
+      `Клиент ${socket.id} присоединился к комнате ${state.currentRoomId} как ${state.userName}`,
     );
   });
 
