@@ -1,65 +1,20 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StreamChansky</title>
-    <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      const ROOM_ID = '<%= roomId %>';
-    </script>
+    <%- include('partials/head', { roomId }) %>
   </head>
   <body>
-    <div class="header">
-      <div class="logo">
-        <div class="header__back">
-          <i class="fas fa-angle-left"></i>
-        </div>
-        <h3>StreamChansky</h3>
-      </div>
-    </div>  
-    <div class="main">  
+    <%- include('partials/header') %>
+    <div class="main">
       <div class="main__left">
-        <div class="videos__group">
-          <div id="video-grid">
-
-          </div>
-        </div>
-        <div class="options">
-          <div class="options__left">
-            <div id="stopVideo" class="options__button">
-              <i class="fa fa-video-camera"></i>
-            </div>
-            <div id="muteButton" class="options__button">
-              <i class="fa fa-microphone"></i>
-            </div>
-          </div>
-          <div class="options__right">
-            <div id="inviteButton" class="options__button">
-              <i class="fa fa-user-plus"></i>
-            </div>
-            <div id="showChat" class="options__button">
-              <i class="fa fa-comment-slash"></i>
-            </div>
-          </div>
-        </div>
+        <%- include('partials/video-grid') %>
+        <%- include('partials/controls') %>
       </div>
       <div class="main__right">
-        <div class="main__chat_window">
-          <div class="messages">
-
-          </div>
-        </div>
-        <div class="main__message_container">
-          <input id="chatMessage" type="text" autocomplete="off" placeholder="Напишите сообщение...">
-          <div id="send" class="options__button">
-            <i class="fa fa-plus" aria-hidden="true"></i>
-          </div>
-        </div>
+        <%- include('partials/chat-window') %>
+        <%- include('partials/chat-input') %>
       </div>
     </div>
+    <%- include('partials/scripts') %>
   </body>
-  <script src="bundle.js"></script>
 </html>
