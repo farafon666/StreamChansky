@@ -34,11 +34,45 @@ export const localStreamPromise = navigator.mediaDevices
   : Promise.resolve(null);
 
 // Функция добавления видеопотока в сетку
-export const addVideoStream = (video, stream) => {
+export const addVideoStream = (video, stream, producerId = null) => {
+  // Проверяем, что поток существует и содержит видео-треки
+  if (!stream || stream.getVideoTracks().length === 0) {
+    console.warn('Поток не содержит видео-треков, видео не будет добавлено.');
+    return;
+  }
+
+  // Если передан producerId, удаляем старый контейнер с таким же идентификатором
+  if (producerId) {
+    const oldContainer = videoGrid.querySelector(
+      `.video-container[data-producer-id="${producerId}"]`,
+    );
+    if (oldContainer) {
+      // Если старый контейнер содержит это же видео, не удаляем
+      if (!oldContainer.contains(video)) {
+        oldContainer.remove();
+      }
+    }
+  }
+
+  // Проверяем, не добавлено ли уже это видео в сетку
+  const existingContainer = video.closest('.video-container');
+  if (existingContainer && videoGrid.contains(existingContainer)) {
+    // Видео уже в сетке, обновляем srcObject
+    video.srcObject = stream;
+    return;
+  }
+
   video.srcObject = stream;
   video.addEventListener('loadedmetadata', () => {
     video.play();
-    videoGrid.append(video);
+    // Создаём контейнер для видео
+    const container = document.createElement('div');
+    container.className = 'video-container';
+    if (producerId) {
+      container.setAttribute('data-producer-id', producerId);
+    }
+    container.appendChild(video);
+    videoGrid.appendChild(container);
   });
 };
 
@@ -200,11 +234,11 @@ export function initWebRTC(socket, user, ROOM_ID) {
 
       // Добавляем видео в сетку
       const remoteVideo = document.createElement('video');
-      remoteVideo.srcObject = new MediaStream([consumer.track]);
-      remoteVideo.addEventListener('loadedmetadata', () => {
-        remoteVideo.play();
-        videoGrid.append(remoteVideo);
-      });
+      addVideoStream(
+        remoteVideo,
+        new MediaStream([consumer.track]),
+        producerId,
+      );
 
       // Возобновляем передачу
       await consumer.resume();
@@ -220,18 +254,12 @@ export function initWebRTC(socket, user, ROOM_ID) {
     if (consumer) {
       consumer.close();
       consumers.delete(producerId);
-      // Находим соответствующий видеоэлемент и удаляем его
-      const videoElements = videoGrid.querySelectorAll('video');
-      for (let video of videoElements) {
-        if (
-          video.srcObject &&
-          video.srcObject
-            .getTracks()
-            .some((track) => track.id === consumer.track.id)
-        ) {
-          video.remove();
-          break;
-        }
+      // Находим соответствующий контейнер с видео по data-producer-id и удаляем его
+      const container = videoGrid.querySelector(
+        `.video-container[data-producer-id="${producerId}"]`,
+      );
+      if (container) {
+        container.remove();
       }
     }
   });
