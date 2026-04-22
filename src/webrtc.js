@@ -11,6 +11,7 @@ export let consumers = new Map();
 // Элементы интерфейса
 const videoGrid = document.getElementById('video-grid');
 const myVideo = document.createElement('video');
+myVideo.muted = true;
 
 // Получение локального медиапотока
 export const localStreamPromise = navigator.mediaDevices
@@ -35,9 +36,9 @@ export const localStreamPromise = navigator.mediaDevices
 
 // Функция добавления видеопотока в сетку
 export const addVideoStream = (video, stream, producerId = null) => {
-  // Проверяем, что поток существует и содержит видео-треки
-  if (!stream || stream.getVideoTracks().length === 0) {
-    console.warn('Поток не содержит видео-треков, видео не будет добавлено.');
+  // Проверяем, что поток существует и содержит хотя бы один трек (аудио или видео)
+  if (!stream || stream.getTracks().length === 0) {
+    console.warn('Поток не содержит треков, не будет добавлен.');
     return;
   }
 
@@ -234,6 +235,11 @@ export function initWebRTC(socket, user, ROOM_ID) {
 
       // Добавляем видео в сетку
       const remoteVideo = document.createElement('video');
+
+      remoteVideo.muted = false;
+      remoteVideo.setAttribute('playsinline', '');
+      remoteVideo.setAttribute('autoplay', '');
+
       addVideoStream(
         remoteVideo,
         new MediaStream([consumer.track]),
