@@ -8,6 +8,13 @@ export let localStream = null;
 export let producers = [];
 export let consumers = new Map();
 
+// Socket.IO соединение
+export let socket = null;
+
+// Демонстрация экрана
+export let screenStream = null;
+export let screenProducer = null;
+
 // Элементы интерфейса
 const videoGrid = document.getElementById('video-grid');
 const myVideo = document.createElement('video');
@@ -101,7 +108,9 @@ export async function publishLocalTracks() {
 }
 
 // Инициализация WebRTC модуля
-export function initWebRTC(socket, user, ROOM_ID) {
+export function initWebRTC(incomingSocket, user, ROOM_ID) {
+  // Сохраняем socket в модульную переменную
+  socket = incomingSocket;
   // Коннект к комнате после получения потока
   socket.on('connect', () => {
     if (!ROOM_ID) {
@@ -269,4 +278,81 @@ export function initWebRTC(socket, user, ROOM_ID) {
       }
     }
   });
+}
+
+// Публикация трека демонстрации экрана
+export async function publishScreenTrack(track) {
+  if (!sendTransport) {
+    console.error('sendTransport не инициализирован');
+    return;
+  }
+
+  try {
+    // Создаём продюсера для трека экрана
+    screenProducer = await sendTransport.produce({ track });
+    producers.push(screenProducer);
+
+    // Создаём поток для отображения локального экрана
+    const stream = new MediaStream([track]);
+    const screenVideo = document.createElement('video');
+    screenVideo.muted = true;
+    screenVideo.setAttribute('playsinline', '');
+    screenVideo.setAttribute('autoplay', '');
+    addVideoStream(screenVideo, stream, screenProducer.id);
+
+    // Сохраняем поток для последующей остановки
+    screenStream = stream;
+  } catch (error) {
+    console.error('Ошибка публикации трека экрана:', error);
+  }
+}
+
+// Остановка демонстрации экрана
+export async function stopScreenTrack() {
+  if (screenProducer) {
+    try {
+      // Отправляем событие закрытия продюсера на сервер
+      if (socket) {
+        socket.emit(
+          'close-producer',
+          { producerId: screenProducer.id },
+          (response) => {
+            if (response && response.error) {
+              console.warn(
+                'Сервер вернул ошибку при закрытии продюсера:',
+                response.error,
+              );
+            }
+          },
+        );
+      } else {
+        console.warn(
+          'Socket не инициализирован, закрываем продюсера локально.',
+        );
+      }
+
+      // Закрываем продюсера локально
+      screenProducer.close();
+      // Удаляем из массива producers
+      const index = producers.indexOf(screenProducer);
+      if (index > -1) {
+        producers.splice(index, 1);
+      }
+      // Удаляем видео контейнер
+      const container = videoGrid.querySelector(
+        `.video-container[data-producer-id="${screenProducer.id}"]`,
+      );
+      if (container) {
+        container.remove();
+      }
+      screenProducer = null;
+    } catch (error) {
+      console.error('Ошибка при остановке продюсера экрана:', error);
+    }
+  }
+
+  if (screenStream) {
+    screenStream.getTracks().forEach((track) => track.stop());
+    screenStream = null;
+  }
 }

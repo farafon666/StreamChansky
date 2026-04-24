@@ -1,3 +1,5 @@
+import { publishScreenTrack, stopScreenTrack } from './webrtc.js';
+
 // Инициализация UI модуля
 export function initUI(localStream) {
   const showChat = document.querySelector('#showChat');
@@ -5,8 +7,12 @@ export function initUI(localStream) {
   const inviteButton = document.querySelector('#inviteButton');
   const muteButton = document.querySelector('#muteButton');
   const stopVideo = document.querySelector('#stopVideo');
+  const screenShareButton = document.querySelector('#screenShareButton');
 
   let isChatExpanded = true;
+  let screenStream = null;
+  let screenVideoTrack = null;
+  let isScreenSharing = false;
 
   backBtn.addEventListener('click', () => {
     document.querySelector('.main__left').style.display = 'flex';
@@ -57,4 +63,55 @@ export function initUI(localStream) {
       : '<i class="fas fa-video"></i>';
     stopVideo.classList.toggle('background__red');
   });
+
+  screenShareButton.addEventListener('click', async () => {
+    if (!isScreenSharing) {
+      // Запуск демонстрации экрана
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false, // можно включить аудио системного звука
+        });
+
+        screenVideoTrack = screenStream.getVideoTracks()[0];
+
+        if (!screenVideoTrack) {
+          throw new Error('Не удалось получить видеодорожку экрана');
+        }
+
+        // Обновляем состояние
+        isScreenSharing = true;
+        screenShareButton.innerHTML = '<i class="fas fa-stop"></i>';
+        screenShareButton.classList.add('background__red');
+
+        // Обработка остановки демонстрации через браузер
+        screenVideoTrack.onended = () => {
+          stopScreenSharing();
+        };
+
+        // Публикация трека экрана в WebRTC
+        publishScreenTrack(screenVideoTrack);
+      } catch (error) {
+        console.error('Ошибка захвата экрана:', error);
+        alert('Не удалось начать демонстрацию экрана. Проверьте разрешения.');
+      }
+    } else {
+      stopScreenSharing();
+    }
+  });
+
+  function stopScreenSharing() {
+    if (screenStream) {
+      screenStream.getTracks().forEach((track) => track.stop());
+      screenStream = null;
+      screenVideoTrack = null;
+    }
+
+    isScreenSharing = false;
+    screenShareButton.innerHTML = '<i class="fa fa-desktop"></i>';
+    screenShareButton.classList.remove('background__red');
+
+    // Остановка публикации трека экрана
+    stopScreenTrack();
+  }
 }

@@ -85,4 +85,42 @@ export function registerProducerConsumerHandlers(socket, io, state) {
       await consumer.resume();
     }
   });
+
+  // Закрытие продюсера
+  socket.on('close-producer', async ({ producerId }, callback) => {
+    const room = getRoom(state.currentRoomId);
+    if (!room) {
+      if (callback) callback({ error: 'Комната не найдена.' });
+      return;
+    }
+
+    const producer = room.producers.get(producerId);
+    if (!producer) {
+      if (callback) callback({ error: 'Продюсер не найден.' });
+      return;
+    }
+
+    // Проверяем, что продюсер принадлежит этому сокету
+    if (producer.appData.socketId !== socket.id) {
+      if (callback) callback({ error: 'Ошибка закрытия продюсера.' });
+      return;
+    }
+
+    try {
+      producer.close();
+      room.producers.delete(producerId);
+
+      // Оповещаем всех остальных участников о закрытии продюсера
+      for (const otherSocketId of room.sockets) {
+        if (otherSocketId !== socket.id) {
+          io.to(otherSocketId).emit('producer-closed', { producerId });
+        }
+      }
+
+      if (callback) callback({ success: true });
+    } catch (err) {
+      console.error(`Ошибка закрытия продюсера ${producerId}:`, err);
+      if (callback) callback({ error: err.message });
+    }
+  });
 }
