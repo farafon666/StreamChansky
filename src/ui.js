@@ -18,7 +18,7 @@ export function initUI(localStream) {
     document.querySelector('.main__left').style.display = 'flex';
     document.querySelector('.main__left').style.flex = '1';
     document.querySelector('.main__right').style.display = 'none';
-    document.querySelector('.header_back').style.display = 'none';
+    document.querySelector('.header__back').style.display = 'none';
   });
 
   showChat.addEventListener('click', () => {

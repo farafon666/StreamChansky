@@ -16,9 +16,15 @@ export let screenStream = null;
 export let screenProducer = null;
 
 // Элементы интерфейса
-const videoGrid = document.getElementById('video-grid');
+const videoMainContainer = document.getElementById('video-main-container');
+const thumbnailsContainer = document.querySelector('.thumbnails-container');
 const myVideo = document.createElement('video');
 myVideo.muted = true;
+
+// Управление миниатюрами и выбранным потоком
+let selectedProducerId = null;
+const thumbnailMap = new Map(); // producerId -> {thumbnail, mainVideo, userName}
+let currentUserName = 'Me';
 
 // Получение локального медиапотока
 export const localStreamPromise = navigator.mediaDevices
@@ -29,7 +35,7 @@ export const localStreamPromise = navigator.mediaDevices
       })
       .then((stream) => {
         localStream = stream;
-        addVideoStream(myVideo, stream);
+        addVideoStream(stream, null, currentUserName);
         return stream;
       })
       .catch((error) => {
@@ -41,47 +47,143 @@ export const localStreamPromise = navigator.mediaDevices
       })
   : Promise.resolve(null);
 
-// Функция добавления видеопотока в сетку
-export const addVideoStream = (video, stream, producerId = null) => {
+// Создание миниатюры
+function createThumbnail(stream, producerId, userName = 'Участник') {
+  const thumbnail = document.createElement('div');
+  thumbnail.className = 'video-thumbnail';
+  thumbnail.dataset.producerId = producerId;
+
+  const video = document.createElement('video');
+  video.srcObject = stream;
+  video.autoplay = true;
+  video.muted = true;
+  video.playsinline = true;
+
+  const info = document.createElement('div');
+  info.className = 'thumbnail-info';
+  info.innerHTML = `
+    <span class="thumbnail-name">${userName}</span>
+    <i class="fas fa-microphone thumbnail-audio-indicator"></i>
+  `;
+
+  thumbnail.appendChild(video);
+  thumbnail.appendChild(info);
+
+  // Обработчик клика для выбора потока
+  thumbnail.addEventListener('click', () => {
+    selectStream(producerId);
+  });
+
+  if (thumbnailsContainer) {
+    thumbnailsContainer.appendChild(thumbnail);
+  }
+
+  return thumbnail;
+}
+
+// Выбор потока для отображения в main-container
+function selectStream(producerId) {
+  // Снять выделение с предыдущей миниатюры
+  if (selectedProducerId) {
+    const prev = thumbnailMap.get(selectedProducerId);
+    if (prev && prev.thumbnail) {
+      prev.thumbnail.classList.remove('selected');
+    }
+  }
+
+  // Установить новое выделение
+  selectedProducerId = producerId;
+  const current = thumbnailMap.get(producerId);
+
+  if (current && videoMainContainer) {
+    current.thumbnail.classList.add('selected');
+
+    // Очистить main-container и добавить выбранное видео
+    videoMainContainer.innerHTML = '';
+    const container = document.createElement('div');
+    container.className = 'video-container';
+
+    // Используем существующий mainVideo или создаем новый
+    let mainVideo = current.mainVideo;
+    if (!mainVideo) {
+      mainVideo = document.createElement('video');
+      mainVideo.srcObject = current.stream;
+      mainVideo.autoplay = true;
+      mainVideo.playsinline = true;
+      mainVideo.className = 'main-video';
+      current.mainVideo = mainVideo;
+    }
+
+    container.appendChild(mainVideo);
+    videoMainContainer.appendChild(container);
+
+    // Обновить аудио индикатор
+    updateAudioIndicator(producerId);
+  }
+}
+
+// Обновление индикатора аудио на миниатюре
+function updateAudioIndicator(producerId) {
+  const data = thumbnailMap.get(producerId);
+  if (!data || !data.thumbnail) return;
+
+  const indicator = data.thumbnail.querySelector('.thumbnail-audio-indicator');
+  if (!indicator) return;
+}
+
+// Функция добавления видеопотока
+export const addVideoStream = (
+  stream,
+  producerId = null,
+  userName = 'Участник',
+) => {
   // Проверяем, что поток существует и содержит хотя бы один трек (аудио или видео)
   if (!stream || stream.getTracks().length === 0) {
     console.warn('Поток не содержит треков, не будет добавлен.');
     return;
   }
 
-  // Если передан producerId, удаляем старый контейнер с таким же идентификатором
-  if (producerId) {
-    const oldContainer = videoGrid.querySelector(
-      `.video-container[data-producer-id="${producerId}"]`,
-    );
-    if (oldContainer) {
-      // Если старый контейнер содержит это же видео, не удаляем
-      if (!oldContainer.contains(video)) {
-        oldContainer.remove();
-      }
-    }
-  }
-
-  // Проверяем, не добавлено ли уже это видео в сетку
-  const existingContainer = video.closest('.video-container');
-  if (existingContainer && videoGrid.contains(existingContainer)) {
-    // Видео уже в сетке, обновляем srcObject
-    video.srcObject = stream;
+  if (!producerId) {
     return;
   }
 
-  video.srcObject = stream;
-  video.addEventListener('loadedmetadata', () => {
-    video.play();
-    // Создаём контейнер для видео
-    const container = document.createElement('div');
-    container.className = 'video-container';
-    if (producerId) {
-      container.setAttribute('data-producer-id', producerId);
+  // Создание миниатюры
+  if (thumbnailsContainer) {
+    // Проверяем, не существует ли уже миниатюра для этого producerId
+    if (!thumbnailMap.has(producerId)) {
+      const thumbnail = createThumbnail(stream, producerId, userName);
+      const mainVideo = document.createElement('video');
+      mainVideo.srcObject = stream;
+      mainVideo.autoplay = true;
+      mainVideo.playsinline = true;
+      mainVideo.className = 'main-video';
+
+      thumbnailMap.set(producerId, {
+        thumbnail,
+        mainVideo,
+        stream,
+        userName,
+      });
+
+      // Если это первый поток, выбираем его по умолчанию
+      if (thumbnailMap.size === 1 && !selectedProducerId) {
+        selectStream(producerId);
+      }
+    } else {
+      // Обновляем существующую миниатюру
+      const data = thumbnailMap.get(producerId);
+      if (data && data.thumbnail) {
+        const thumbVideo = data.thumbnail.querySelector('video');
+        if (thumbVideo) {
+          thumbVideo.srcObject = stream;
+        }
+        // Обновляем mainVideo если он существует
+        if (data.mainVideo) {
+          data.mainVideo.srcObject = stream;
+        }
+      }
     }
-    container.appendChild(video);
-    videoGrid.appendChild(container);
-  });
+  }
 };
 
 // Функция публикации аудио и видео треков
@@ -101,6 +203,11 @@ export async function publishLocalTracks() {
     if (videoTrack) {
       const videoProducer = await sendTransport.produce({ track: videoTrack });
       producers.push(videoProducer);
+
+      // Добавляем миниатюру для локального потока с полученным producerId
+      if (localStream && myVideo) {
+        addVideoStream(localStream, videoProducer.id, currentUserName);
+      }
     }
   } catch (error) {
     console.error('Ошибка при публикации треков: ', error);
@@ -111,6 +218,8 @@ export async function publishLocalTracks() {
 export function initWebRTC(incomingSocket, user, ROOM_ID) {
   // Сохраняем socket в модульную переменную
   socket = incomingSocket;
+  // Сохраняем имя пользователя
+  currentUserName = user || 'Me';
   // Коннект к комнате после получения потока
   socket.on('connect', () => {
     if (!ROOM_ID) {
@@ -249,11 +358,7 @@ export function initWebRTC(incomingSocket, user, ROOM_ID) {
       remoteVideo.setAttribute('playsinline', '');
       remoteVideo.setAttribute('autoplay', '');
 
-      addVideoStream(
-        remoteVideo,
-        new MediaStream([consumer.track]),
-        producerId,
-      );
+      addVideoStream(new MediaStream([consumer.track]), producerId, 'Участник');
 
       // Возобновляем передачу
       await consumer.resume();
@@ -269,12 +374,31 @@ export function initWebRTC(incomingSocket, user, ROOM_ID) {
     if (consumer) {
       consumer.close();
       consumers.delete(producerId);
-      // Находим соответствующий контейнер с видео по data-producer-id и удаляем его
-      const container = videoGrid.querySelector(
-        `.video-container[data-producer-id="${producerId}"]`,
-      );
-      if (container) {
-        container.remove();
+    }
+
+    // Удаление миниатюры
+    const thumbnailData = thumbnailMap.get(producerId);
+    if (thumbnailData && thumbnailData.thumbnail) {
+      thumbnailData.thumbnail.remove();
+    }
+    thumbnailMap.delete(producerId);
+
+    // Если удалён выбранный поток, выбрать другой
+    if (selectedProducerId === producerId) {
+      const firstId = Array.from(thumbnailMap.keys())[0];
+      if (firstId) {
+        selectStream(firstId);
+      } else {
+        // Показать placeholder
+        if (videoMainContainer) {
+          videoMainContainer.innerHTML = `
+            <div class="video-main-placeholder">
+              <i class="fas fa-video"></i>
+              <p>Выберите поток для просмотра</p>
+            </div>
+          `;
+        }
+        selectedProducerId = null;
       }
     }
   });
@@ -298,7 +422,7 @@ export async function publishScreenTrack(track) {
     screenVideo.muted = true;
     screenVideo.setAttribute('playsinline', '');
     screenVideo.setAttribute('autoplay', '');
-    addVideoStream(screenVideo, stream, screenProducer.id);
+    addVideoStream(stream, screenProducer.id, `${currentUserName} (Экран)`);
 
     // Сохраняем поток для последующей остановки
     screenStream = stream;
@@ -338,13 +462,32 @@ export async function stopScreenTrack() {
       if (index > -1) {
         producers.splice(index, 1);
       }
-      // Удаляем видео контейнер
-      const container = videoGrid.querySelector(
-        `.video-container[data-producer-id="${screenProducer.id}"]`,
-      );
-      if (container) {
-        container.remove();
+
+      // Удаляем миниатюру экрана
+      const thumbnailData = thumbnailMap.get(screenProducer.id);
+      if (thumbnailData && thumbnailData.thumbnail) {
+        thumbnailData.thumbnail.remove();
       }
+      thumbnailMap.delete(screenProducer.id);
+
+      // Если выбранный поток был экраном, выбираем другой
+      if (selectedProducerId === screenProducer.id) {
+        const firstId = Array.from(thumbnailMap.keys())[0];
+        if (firstId) {
+          selectStream(firstId);
+        } else {
+          if (videoMainContainer) {
+            videoMainContainer.innerHTML = `
+              <div class="video-main-placeholder">
+                <i class="fas fa-video"></i>
+                <p>Выберите поток для просмотра</p>
+              </div>
+            `;
+          }
+          selectedProducerId = null;
+        }
+      }
+
       screenProducer = null;
     } catch (error) {
       console.error('Ошибка при остановке продюсера экрана:', error);

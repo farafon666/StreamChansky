@@ -228,17 +228,7 @@ video {
   border-radius: 5px;
 }
 
-#video-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  grid-auto-rows: 1fr;
-  gap: 1rem;
-  justify-items: stretch;
-  align-items: stretch;
-  width: 100%;
-  padding: 1rem;
-  box-sizing: border-box;
-}
+
 
 /* Адаптивные стили для видео-сетки */
 .video-container {
@@ -255,6 +245,130 @@ video {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.videos__group {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--main-dark);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Основной контейнер (80% высоты) */
+.video-main-container {
+  flex: 0.8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--main-dark);
+}
+
+.video-main-container .video-container {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  aspect-ratio: auto;
+}
+
+.video-main-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0;
+}
+
+.video-main-placeholder {
+  text-align: center;
+  color: var(--main-light);
+  opacity: 0.5;
+}
+
+.video-main-placeholder i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Футер с миниатюрами (20% высоты) */
+.video-footer {
+  flex: 0.2;
+  min-height: 120px;
+  background-color: var(--main-darklg);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem;
+}
+
+.thumbnails-container {
+  display: flex;
+  gap: 0.5rem;
+  height: 100%;
+  align-items: center;
+  padding: 0 0.5rem;
+}
+
+/* Стили для миниатюр */
+.video-thumbnail {
+  position: relative;
+  width: 160px;
+  height: 90px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--main-dark);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.video-thumbnail:hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.video-thumbnail.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 10px rgba(47, 128, 236, 0.5);
+}
+
+.video-thumbnail video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  color: white;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.thumbnail-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumbnail-audio-indicator {
+  color: #4CAF50;
+}
+
+.thumbnail-audio-indicator.muted {
+  color: #f6484a;
 }
 
 .header__back {
@@ -303,12 +417,6 @@ video {
     min-width: 350px;
   }
   
-  #video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
-    gap: 1.5rem;
-  }
-  
-  
   .options {
     padding: 1.5rem;
   }
@@ -349,12 +457,6 @@ video {
     flex: 0.2;
     min-width: 400px;
   }
-  
-  #video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
-    gap: 2rem;
-  }
-  
   
   .video-container {
     max-width: 700px;
@@ -399,12 +501,6 @@ video {
   .main__right {
     flex: 0.4;
   }
-  
-  #video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 0.8rem;
-  }
-  
 }
 
 /* Планшеты (768px и меньше) */
@@ -449,12 +545,19 @@ video {
     padding: 0.5rem;
   }
   
-  #video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 0.6rem;
-    padding: 0.5rem;
+  .video-main-container {
+    flex: 0.7;
   }
   
+  .video-footer {
+    flex: 0.3;
+    min-height: 100px;
+  }
+  
+  .video-thumbnail {
+    width: 120px;
+    height: 68px;
+  } 
   
   .options {
     padding: 0.8rem;
@@ -495,14 +598,7 @@ video {
   .main__left {
     width: 100%;
     flex: 1;
-  }
-
-  #video-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 0.4rem;
-    padding: 0.3rem;
-  }
-  
+  }  
   
   .videos__group {
     padding: 0.3rem;
@@ -554,12 +650,23 @@ video {
     height: 94vh;
   }
   
-  #video-grid {
-    grid-template-columns: 1fr;
-    gap: 0.3rem;
-    padding: 0.2rem;
+  .video-thumbnail {
+    width: 100px;
+    height: 56px;
   }
   
+  .thumbnail-info {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.3rem;
+  }
+  
+  .video-main-placeholder i {
+    font-size: 3rem;
+  }
+  
+  .video-main-placeholder p {
+    font-size: 0.9rem;
+  }
   
   .options__button {
     height: 35px;
