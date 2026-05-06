@@ -1,4 +1,8 @@
-import { publishScreenTrack, stopScreenTrack } from './webrtc.js';
+import {
+  publishScreenTrack,
+  stopScreenTrack,
+  videoMainContainer,
+} from './webrtc.js';
 
 // Инициализация UI модуля
 export function initUI(localStream) {
@@ -8,11 +12,13 @@ export function initUI(localStream) {
   const muteButton = document.querySelector('#muteButton');
   const stopVideo = document.querySelector('#stopVideo');
   const screenShareButton = document.querySelector('#screenShareButton');
+  const fullscreenButton = document.querySelector('#fullscreenButton');
 
   let isChatExpanded = true;
   let screenStream = null;
   let screenVideoTrack = null;
   let isScreenSharing = false;
+  let isFullscreen = false;
 
   backBtn.addEventListener('click', () => {
     document.querySelector('.main__left').style.display = 'flex';
@@ -114,4 +120,39 @@ export function initUI(localStream) {
     // Остановка публикации трека экрана
     stopScreenTrack();
   }
+
+  // Обработчик полноэкранного режима
+  fullscreenButton.addEventListener('click', () => {
+    if (!videoMainContainer) return;
+
+    const isFullscreen =
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement;
+
+    if (!isFullscreen) {
+      // Вход в полноэкранный режим
+      if (videoMainContainer.requestFullscreen) {
+        videoMainContainer.requestFullscreen();
+      } else if (videoMainContainer.webkitRequestFullscreen) {
+        videoMainContainer.webkitRequestFullscreen();
+      } else if (videoMainContainer.mozRequestFullScreen) {
+        videoMainContainer.mozRequestFullScreen();
+      } else if (videoMainContainer.msRequestFullscreen) {
+        videoMainContainer.msRequestFullscreen();
+      }
+    } else {
+      // Выход из полноэкранного режима
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    }
+  });
 }

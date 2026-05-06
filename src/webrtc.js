@@ -16,7 +16,9 @@ export let screenStream = null;
 export let screenProducer = null;
 
 // Элементы интерфейса
-const videoMainContainer = document.getElementById('video-main-container');
+export const videoMainContainer = document.getElementById(
+  'video-main-container',
+);
 const thumbnailsContainer = document.querySelector('.thumbnails-container');
 const myVideo = document.createElement('video');
 myVideo.muted = true;
