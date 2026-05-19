@@ -15,6 +15,9 @@ export let socket = null;
 export let screenStream = null;
 export let screenProducer = null;
 
+// Видеопоток с камеры
+export let videoProducer = null;
+
 // Элементы интерфейса
 export const videoMainContainer = document.getElementById(
   'video-main-container',
@@ -203,7 +206,7 @@ export async function publishLocalTracks() {
     // Публикация видео дорожки
     const videoTrack = localStream.getVideoTracks()[0];
     if (videoTrack) {
-      const videoProducer = await sendTransport.produce({ track: videoTrack });
+      videoProducer = await sendTransport.produce({ track: videoTrack });
       producers.push(videoProducer);
 
       // Добавляем миниатюру для локального потока с полученным producerId
@@ -499,5 +502,163 @@ export async function stopScreenTrack() {
   if (screenStream) {
     screenStream.getTracks().forEach((track) => track.stop());
     screenStream = null;
+  }
+}
+
+// Остановка видеопотока с камеры
+export async function stopVideoTrack() {
+  if (videoProducer) {
+    try {
+      // Отправляем событие закрытия продюсера на сервер
+      if (socket) {
+        socket.emit(
+          'close-producer',
+          { producerId: videoProducer.id },
+          (response) => {
+            if (response && response.error) {
+              console.warn(
+                'Сервер вернул ошибку при закрытии продюсера:',
+                response.error,
+              );
+            }
+          },
+        );
+      } else {
+        console.warn(
+          'Socket не инициализирован, закрываем продюсера локально.',
+        );
+      }
+
+      // Закрываем продюсера локально
+      videoProducer.close();
+      // Удаляем из массива producers
+      const index = producers.indexOf(videoProducer);
+      if (index > -1) {
+        producers.splice(index, 1);
+      }
+
+      // Удаляем миниатюру видео
+      const thumbnailData = thumbnailMap.get(videoProducer.id);
+      if (thumbnailData && thumbnailData.thumbnail) {
+        thumbnailData.thumbnail.remove();
+      }
+      thumbnailMap.delete(videoProducer.id);
+
+      // Если выбранный поток был видео, выбираем другой
+      if (selectedProducerId === videoProducer.id) {
+        const firstId = Array.from(thumbnailMap.keys())[0];
+        if (firstId) {
+          selectStream(firstId);
+        } else {
+          if (videoMainContainer) {
+            videoMainContainer.innerHTML = `
+              <div class="video-main-placeholder">
+                <i class="fas fa-video"></i>
+                <p>Выберите поток для просмотра</p>
+              </div>
+            `;
+          }
+          selectedProducerId = null;
+        }
+      }
+
+      videoProducer = null;
+    } catch (error) {
+      console.error('Ошибка при остановке продюсера видео:', error);
+    }
+  }
+}
+
+// Включение видеопотока с камеры
+export async function startVideoTrack() {
+  if (!sendTransport || !localStream) {
+    console.warn('sendTransport или localStream не инициализированы');
+    return;
+  }
+
+  let videoTrack = localStream.getVideoTracks()[0];
+  if (!videoTrack) {
+    console.warn('Видеотрек не найден в localStream');
+    return;
+  }
+
+  // Проверяем состояние трека
+  if (videoTrack.readyState !== 'live') {
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false, // аудио уже есть в localStream
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (!newVideoTrack) {
+        throw new Error('Не удалось получить новый видеотрек');
+      }
+
+      // Заменяем старый видеотрек в localStream
+      const oldVideoTrack = localStream.getVideoTracks()[0];
+      if (oldVideoTrack) {
+        localStream.removeTrack(oldVideoTrack);
+        // Останавливаем только если трек ещё не завершён
+        if (oldVideoTrack.readyState === 'live') {
+          oldVideoTrack.stop();
+        }
+      }
+      localStream.addTrack(newVideoTrack);
+      videoTrack = newVideoTrack;
+    } catch (error) {
+      console.error('Ошибка перезапуска камеры:', error);
+      return;
+    }
+  }
+
+  if (videoProducer) {
+    console.warn('Видеопродюсер уже существует');
+    return;
+  }
+
+  try {
+    // Включаем видеотрек
+    videoTrack.enabled = true;
+
+    if (videoTrack.readyState !== 'live') {
+      console.warn(
+        'Трек не в состоянии "live" перед созданием продюсера, повторный перезапуск',
+      );
+      // Попробуем перезапустить камеру ещё раз
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (newVideoTrack) {
+        const oldVideoTrack = localStream.getVideoTracks()[0];
+        if (oldVideoTrack) {
+          localStream.removeTrack(oldVideoTrack);
+          if (oldVideoTrack.readyState === 'live') oldVideoTrack.stop();
+        }
+        localStream.addTrack(newVideoTrack);
+        videoTrack = newVideoTrack;
+        console.log('Камера перезапущена перед созданием продюсера');
+      } else {
+        throw new Error(
+          'Не удалось получить видеотрек после повторного перезапуска',
+        );
+      }
+    }
+
+    // Создаём продюсера для видео
+    videoProducer = await sendTransport.produce({ track: videoTrack });
+    producers.push(videoProducer);
+
+    // Добавляем миниатюру для локального видео
+    addVideoStream(localStream, videoProducer.id, currentUserName);
+  } catch (error) {
+    console.error('Ошибка при создании видеопродюсера:', error);
+    // Если ошибка связана с завершённым треком - сбросим videoProducer
+    if (error.message.includes('ended') || error.name === 'InvalidStateError') {
+      videoProducer = null;
+    }
+    // Пробрасываем ошибку дальше, чтобы UI мог отреагировать
+    throw error;
   }
 }

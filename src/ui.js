@@ -1,6 +1,9 @@
 import {
   publishScreenTrack,
   stopScreenTrack,
+  startVideoTrack,
+  stopVideoTrack,
+  videoProducer,
   videoMainContainer,
 } from './webrtc.js';
 
@@ -57,17 +60,31 @@ export function initUI(localStream) {
     }
   });
 
-  stopVideo.addEventListener('click', () => {
+  function updateVideoButton() {
+    if (videoProducer) {
+      stopVideo.innerHTML = '<i class="fas fa-video"></i>';
+      stopVideo.classList.remove('background__red');
+    } else {
+      stopVideo.innerHTML = '<i class="fas fa-video-slash"></i>';
+      stopVideo.classList.add('background__red');
+    }
+  }
+
+  // Инициализируем кнопку в соответствии с текущим состоянием
+  updateVideoButton();
+
+  stopVideo.addEventListener('click', async () => {
     if (!localStream) return;
     const videoTracks = localStream.getVideoTracks();
     if (videoTracks.length === 0) return;
-    const videoTrack = videoTracks[0];
-    const isEnabled = videoTrack.enabled;
-    videoTrack.enabled = !isEnabled;
-    stopVideo.innerHTML = isEnabled
-      ? '<i class="fas fa-video-slash"></i>'
-      : '<i class="fas fa-video"></i>';
-    stopVideo.classList.toggle('background__red');
+
+    if (videoProducer) {
+      await stopVideoTrack();
+    } else {
+      await startVideoTrack();
+    }
+
+    updateVideoButton();
   });
 
   screenShareButton.addEventListener('click', async () => {
