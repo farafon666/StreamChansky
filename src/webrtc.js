@@ -36,7 +36,7 @@ export const localStreamPromise = navigator.mediaDevices
   ? navigator.mediaDevices
       .getUserMedia({
         audio: true,
-        video: true,
+        video: false,
       })
       .then((stream) => {
         localStream = stream;
@@ -45,9 +45,7 @@ export const localStreamPromise = navigator.mediaDevices
       })
       .catch((error) => {
         console.error('Ошибка доступа к медиаустройствам: ', error);
-        alert(
-          'Не удалось получить доступ к камере/микрофону. Проверьте разрешения.',
-        );
+        alert('Не удалось получить доступ к микрофону. Проверьте разрешения.');
         return null;
       })
   : Promise.resolve(null);
@@ -58,11 +56,27 @@ function createThumbnail(stream, producerId, userName = 'Участник') {
   thumbnail.className = 'video-thumbnail';
   thumbnail.dataset.producerId = producerId;
 
-  const video = document.createElement('video');
-  video.srcObject = stream;
-  video.autoplay = true;
-  video.muted = true;
-  video.playsinline = true;
+  const hasVideo = stream.getVideoTracks().length > 0;
+  let mediaElement;
+
+  if (hasVideo) {
+    // Создаём видео элемент
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    video.muted = true;
+    video.playsinline = true;
+    mediaElement = video;
+    thumbnail.dataset.hasVideo = 'true';
+  } else {
+    // Создаём placeholder с именем пользователя
+    const placeholder = document.createElement('div');
+    placeholder.className = 'thumbnail-placeholder';
+    placeholder.textContent = userName.charAt(0).toUpperCase(); // Первая буква имени
+    placeholder.title = userName;
+    mediaElement = placeholder;
+    thumbnail.dataset.hasVideo = 'false';
+  }
 
   const info = document.createElement('div');
   info.className = 'thumbnail-info';
@@ -71,7 +85,7 @@ function createThumbnail(stream, producerId, userName = 'Участник') {
     <i class="fas fa-microphone thumbnail-audio-indicator"></i>
   `;
 
-  thumbnail.appendChild(video);
+  thumbnail.appendChild(mediaElement);
   thumbnail.appendChild(info);
 
   // Обработчик клика для выбора потока
@@ -168,6 +182,7 @@ export const addVideoStream = (
         mainVideo,
         stream,
         userName,
+        hasVideo: stream.getVideoTracks().length > 0,
       });
 
       // Если это первый поток, выбираем его по умолчанию
@@ -178,20 +193,49 @@ export const addVideoStream = (
       // Обновляем существующую миниатюру
       const data = thumbnailMap.get(producerId);
       if (data && data.thumbnail) {
-        const thumbVideo = data.thumbnail.querySelector('video');
-        if (thumbVideo) {
-          thumbVideo.srcObject = stream;
+        const hasVideo = stream.getVideoTracks().length > 0;
+        const oldHasVideo = data.hasVideo;
+
+        // Если тип потока изменился (появилось или исчезло видео), пересоздаём миниатюру
+        if (hasVideo !== oldHasVideo) {
+          // Удаляем старую миниатюру
+          data.thumbnail.remove();
+          // Создаём новую миниатюру
+          const newThumbnail = createThumbnail(stream, producerId, userName);
+          data.thumbnail = newThumbnail;
+          data.hasVideo = hasVideo;
+          // Обновляем mainVideo
+          if (data.mainVideo) {
+            data.mainVideo.srcObject = stream;
+          }
+        } else {
+          // Тип не изменился, просто обновляем источник
+          const mediaElement = data.thumbnail.querySelector(
+            'video, .thumbnail-placeholder',
+          );
+          if (mediaElement && mediaElement.tagName === 'VIDEO') {
+            mediaElement.srcObject = stream;
+          }
+          // Обновляем mainVideo если он существует
+          if (data.mainVideo) {
+            data.mainVideo.srcObject = stream;
+          }
         }
-        // Обновляем mainVideo если он существует
-        if (data.mainVideo) {
-          data.mainVideo.srcObject = stream;
+        // Обновляем имя пользователя в info
+        const nameSpan = data.thumbnail.querySelector('.thumbnail-name');
+        if (nameSpan) {
+          nameSpan.textContent = userName;
         }
+        data.userName = userName;
+        data.stream = stream;
       }
     }
   }
 };
 
 // Функция публикации аудио и видео треков
+export let audioProducer = null;
+
 export async function publishLocalTracks() {
   if (!sendTransport || !localStream) return;
 
@@ -199,20 +243,11 @@ export async function publishLocalTracks() {
     // Публикация аудио дорожки
     const audioTrack = localStream.getAudioTracks()[0];
     if (audioTrack) {
-      const audioProducer = await sendTransport.produce({ track: audioTrack });
+      audioProducer = await sendTransport.produce({ track: audioTrack });
       producers.push(audioProducer);
-    }
 
-    // Публикация видео дорожки
-    const videoTrack = localStream.getVideoTracks()[0];
-    if (videoTrack) {
-      videoProducer = await sendTransport.produce({ track: videoTrack });
-      producers.push(videoProducer);
-
-      // Добавляем миниатюру для локального потока с полученным producerId
-      if (localStream && myVideo) {
-        addVideoStream(localStream, videoProducer.id, currentUserName);
-      }
+      // Добавляем миниатюру для локального потока с producerId аудио
+      addVideoStream(localStream, audioProducer.id, currentUserName);
     }
   } catch (error) {
     console.error('Ошибка при публикации треков: ', error);
@@ -537,6 +572,13 @@ export async function stopVideoTrack() {
         producers.splice(index, 1);
       }
 
+      // Удаляем видеотрек из localStream
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        localStream.removeTrack(videoTrack);
+        videoTrack.stop();
+      }
+
       // Удаляем миниатюру видео
       const thumbnailData = thumbnailMap.get(videoProducer.id);
       if (thumbnailData && thumbnailData.thumbnail) {
@@ -562,6 +604,11 @@ export async function stopVideoTrack() {
         }
       }
 
+      // Создаём миниатюру для аудио (placeholder)
+      if (audioProducer && localStream) {
+        addVideoStream(localStream, audioProducer.id, currentUserName);
+      }
+
       videoProducer = null;
     } catch (error) {
       console.error('Ошибка при остановке продюсера видео:', error);
@@ -576,18 +623,34 @@ export async function startVideoTrack() {
     return;
   }
 
+  // Проверяем, есть ли уже видеотрек в localStream
   let videoTrack = localStream.getVideoTracks()[0];
   if (!videoTrack) {
-    console.warn('Видеотрек не найден в localStream');
-    return;
+    // Запрашиваем камеру (только видео, аудио уже есть)
+    try {
+      const videoStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      videoTrack = videoStream.getVideoTracks()[0];
+      if (!videoTrack) {
+        throw new Error('Не удалось получить видеотрек с камеры');
+      }
+      // Добавляем видеотрек в существующий localStream
+      localStream.addTrack(videoTrack);
+    } catch (error) {
+      console.error('Ошибка доступа к камере:', error);
+      throw error;
+    }
   }
 
   // Проверяем состояние трека
   if (videoTrack.readyState !== 'live') {
+    console.warn('Видеотрек не в состоянии "live", пытаемся перезапустить');
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: false, // аудио уже есть в localStream
+        audio: false,
       });
       const newVideoTrack = newStream.getVideoTracks()[0];
       if (!newVideoTrack) {
@@ -598,7 +661,6 @@ export async function startVideoTrack() {
       const oldVideoTrack = localStream.getVideoTracks()[0];
       if (oldVideoTrack) {
         localStream.removeTrack(oldVideoTrack);
-        // Останавливаем только если трек ещё не завершён
         if (oldVideoTrack.readyState === 'live') {
           oldVideoTrack.stop();
         }
@@ -607,7 +669,7 @@ export async function startVideoTrack() {
       videoTrack = newVideoTrack;
     } catch (error) {
       console.error('Ошибка перезапуска камеры:', error);
-      return;
+      throw error;
     }
   }
 
@@ -620,37 +682,20 @@ export async function startVideoTrack() {
     // Включаем видеотрек
     videoTrack.enabled = true;
 
-    if (videoTrack.readyState !== 'live') {
-      console.warn(
-        'Трек не в состоянии "live" перед созданием продюсера, повторный перезапуск',
-      );
-      // Попробуем перезапустить камеру ещё раз
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false,
-      });
-      const newVideoTrack = newStream.getVideoTracks()[0];
-      if (newVideoTrack) {
-        const oldVideoTrack = localStream.getVideoTracks()[0];
-        if (oldVideoTrack) {
-          localStream.removeTrack(oldVideoTrack);
-          if (oldVideoTrack.readyState === 'live') oldVideoTrack.stop();
-        }
-        localStream.addTrack(newVideoTrack);
-        videoTrack = newVideoTrack;
-        console.log('Камера перезапущена перед созданием продюсера');
-      } else {
-        throw new Error(
-          'Не удалось получить видеотрек после повторного перезапуска',
-        );
-      }
-    }
-
     // Создаём продюсера для видео
     videoProducer = await sendTransport.produce({ track: videoTrack });
     producers.push(videoProducer);
 
-    // Добавляем миниатюру для локального видео
+    // Удаляем старую миниатюру аудио и добавляем новую с видео
+    if (audioProducer && thumbnailMap.has(audioProducer.id)) {
+      const audioThumbData = thumbnailMap.get(audioProducer.id);
+      if (audioThumbData && audioThumbData.thumbnail) {
+        audioThumbData.thumbnail.remove();
+      }
+      thumbnailMap.delete(audioProducer.id);
+    }
+
+    // Добавляем миниатюру для локального видео с producerId видеопродюсера
     addVideoStream(localStream, videoProducer.id, currentUserName);
   } catch (error) {
     console.error('Ошибка при создании видеопродюсера:', error);

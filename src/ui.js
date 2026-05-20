@@ -75,13 +75,16 @@ export function initUI(localStream) {
 
   stopVideo.addEventListener('click', async () => {
     if (!localStream) return;
-    const videoTracks = localStream.getVideoTracks();
-    if (videoTracks.length === 0) return;
 
-    if (videoProducer) {
-      await stopVideoTrack();
-    } else {
-      await startVideoTrack();
+    try {
+      if (videoProducer) {
+        await stopVideoTrack();
+      } else {
+        await startVideoTrack();
+      }
+    } catch (error) {
+      console.error('Ошибка переключения видео:', error);
+      return;
     }
 
     updateVideoButton();
