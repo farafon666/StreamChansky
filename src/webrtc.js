@@ -133,6 +133,9 @@ function selectStream(producerId) {
       current.mainVideo = mainVideo;
     }
 
+    // Если выбран локальный поток — отключаем звук, чтобы избежать эха
+    mainVideo.muted = current.stream === localStream;
+
     container.appendChild(mainVideo);
     videoMainContainer.appendChild(container);
 
@@ -176,6 +179,8 @@ export const addVideoStream = (
       mainVideo.autoplay = true;
       mainVideo.playsinline = true;
       mainVideo.className = 'main-video';
+      // Отключаем звук для локального потока, чтобы избежать эха
+      mainVideo.muted = stream === localStream;
 
       thumbnailMap.set(producerId, {
         thumbnail,
