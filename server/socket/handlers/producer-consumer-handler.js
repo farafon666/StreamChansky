@@ -21,7 +21,10 @@ export function registerProducerConsumerHandlers(socket, io, state) {
 
       try {
         const producer = await transport.produce({ kind, rtpParameters });
-        producer.appData = { socketId: socket.id };
+        producer.appData = {
+          socketId: socket.id,
+          userName: state.userName,
+        };
 
         // Сохраняем продюсер в комнате
         room.producers.set(producer.id, producer);
@@ -32,6 +35,7 @@ export function registerProducerConsumerHandlers(socket, io, state) {
             io.to(otherSocketId).emit('new-producer', {
               producerId: producer.id,
               kind,
+              userName: state.userName,
             });
           }
         }

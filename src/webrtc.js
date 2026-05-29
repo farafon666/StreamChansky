@@ -51,7 +51,7 @@ export const localStreamPromise = navigator.mediaDevices
   : Promise.resolve(null);
 
 // Создание миниатюры
-function createThumbnail(stream, producerId, userName = 'Участник') {
+function createThumbnail(stream, producerId, userName = 'No name') {
   const thumbnail = document.createElement('div');
   thumbnail.className = 'video-thumbnail';
   thumbnail.dataset.producerId = producerId;
@@ -161,7 +161,7 @@ function updateAudioIndicator(producerId) {
 export const addVideoStream = (
   stream,
   producerId = null,
-  userName = 'Участник',
+  userName = 'No name',
 ) => {
   // Проверяем, что поток существует и содержит хотя бы один трек (аудио или видео)
   if (!stream || stream.getTracks().length === 0) {
@@ -373,7 +373,7 @@ export function initWebRTC(incomingSocket, user, ROOM_ID) {
   );
 
   // Обработка новых продюсеров в комнате
-  socket.on('new-producer', async ({ producerId, kind }) => {
+  socket.on('new-producer', async ({ producerId, kind, userName }) => {
     try {
       // Запрашиваем создание consumer у сервера
       const { id, rtpParameters } = await new Promise((resolve, reject) => {
@@ -407,7 +407,7 @@ export function initWebRTC(incomingSocket, user, ROOM_ID) {
       remoteVideo.setAttribute('playsinline', '');
       remoteVideo.setAttribute('autoplay', '');
 
-      addVideoStream(new MediaStream([consumer.track]), producerId, 'Участник');
+      addVideoStream(new MediaStream([consumer.track]), producerId, userName);
 
       // Возобновляем передачу
       await consumer.resume();

@@ -65,7 +65,11 @@ export function registerRoomHandlers(socket, io, state) {
       for (const [producerId, producer] of room.producers.entries()) {
         // Не отправляем продюсеры этого же клиента (если он уже успел что-то создать)
         if (producer.appData.socketId !== socket.id) {
-          socket.emit('new-producer', { producerId, kind: producer.kind });
+          socket.emit('new-producer', {
+            producerId,
+            kind: producer.kind,
+            userName: producer.appData.userName || 'No name',
+          });
         }
       }
     } catch (err) {
