@@ -26,6 +26,12 @@ const thumbnailsContainer = document.querySelector('.thumbnails-container');
 const myVideo = document.createElement('video');
 myVideo.muted = true;
 
+// Скрытый контейнер для постоянных аудио-потоков удалённых участников
+const remoteAudioContainer = document.createElement('div');
+remoteAudioContainer.id = 'remote-audio-container';
+remoteAudioContainer.style.display = 'none';
+document.body.appendChild(remoteAudioContainer);
+
 // Управление миниатюрами и выбранным потоком
 let selectedProducerId = null;
 const thumbnailMap = new Map(); // producerId -> {thumbnail, mainVideo, userName}
@@ -117,30 +123,46 @@ function selectStream(producerId) {
   if (current && videoMainContainer) {
     current.thumbnail.classList.add('selected');
 
-    // Очистить main-container и добавить выбранное видео
+    // Очистить main-container
     videoMainContainer.innerHTML = '';
-    const container = document.createElement('div');
-    container.className = 'video-container';
 
-    // Используем существующий mainVideo или создаем новый
-    let mainVideo = current.mainVideo;
-    if (!mainVideo) {
-      mainVideo = document.createElement('video');
-      mainVideo.srcObject = current.stream;
-      mainVideo.autoplay = true;
-      mainVideo.playsinline = true;
-      mainVideo.className = 'main-video';
-      current.mainVideo = mainVideo;
-    }
+    const hasVideo = current.stream.getVideoTracks().length > 0;
 
-    // Если выбран локальный поток — отключаем звук, чтобы избежать эха
-    mainVideo.muted = current.stream === localStream;
+    if (hasVideo) {
+      // Показываем видео-элемент
+      const container = document.createElement('div');
+      container.className = 'video-container';
 
-    container.appendChild(mainVideo);
-    videoMainContainer.appendChild(container);
-    // Явно запускаем воспроизведение после перемонтирования в DOM, т.к. autoplay срабатывает только при первой установке srcObject.
-    if (mainVideo.paused) {
-      mainVideo.play();
+      // Используем существующий mainVideo или создаем новый
+      let mainVideo = current.mainVideo;
+      if (!mainVideo) {
+        mainVideo = document.createElement('video');
+        mainVideo.srcObject = current.stream;
+        mainVideo.autoplay = true;
+        mainVideo.playsinline = true;
+        mainVideo.className = 'main-video';
+        current.mainVideo = mainVideo;
+      }
+
+      // Если выбран локальный поток — отключаем звук, чтобы избежать эха
+      mainVideo.muted = current.stream === localStream;
+
+      container.appendChild(mainVideo);
+      videoMainContainer.appendChild(container);
+      // Явно запускаем воспроизведение после перемонтирования в DOM
+      if (mainVideo.paused) {
+        mainVideo.play();
+      }
+    } else {
+      // Показываем placeholder с именем пользователя
+      const placeholder = document.createElement('div');
+      placeholder.className = 'video-main-placeholder';
+      placeholder.innerHTML = `
+        <i class="fas fa-user"></i>
+        <p>${current.userName}</p>
+        <small>Аудио поток</small>
+      `;
+      videoMainContainer.appendChild(placeholder);
     }
 
     // Обновить аудио индикатор
@@ -399,15 +421,23 @@ export function initWebRTC(incomingSocket, user, ROOM_ID) {
       });
 
       consumers.set(producerId, consumer);
+      const stream = new MediaStream([consumer.track]);
 
-      // Добавляем видео в сетку
-      const remoteVideo = document.createElement('video');
+      if (kind === 'audio') {
+        // Создаём постоянный скрытый audio-элемент
+        const audioEl = document.createElement('audio');
+        audioEl.dataset.producerId = producerId;
+        audioEl.srcObject = stream;
+        audioEl.autoplay = true;
+        audioEl.playsinline = true;
+        remoteAudioContainer.appendChild(audioEl);
 
-      remoteVideo.muted = false;
-      remoteVideo.setAttribute('playsinline', '');
-      remoteVideo.setAttribute('autoplay', '');
-
-      addVideoStream(new MediaStream([consumer.track]), producerId, userName);
+        // Добавляем миниатюру
+        addVideoStream(stream, producerId, userName);
+      } else {
+        // Добавляем миниатюру для видео
+        addVideoStream(stream, producerId, userName);
+      }
 
       // Возобновляем передачу
       await consumer.resume();
@@ -423,6 +453,15 @@ export function initWebRTC(incomingSocket, user, ROOM_ID) {
     if (consumer) {
       consumer.close();
       consumers.delete(producerId);
+    }
+
+    // Удаление скрытого аудио-элемента
+    const audioEl = remoteAudioContainer.querySelector(
+      `audio[data-producer-id="${producerId}"]`,
+    );
+    if (audioEl) {
+      audioEl.srcObject = null;
+      audioEl.remove();
     }
 
     // Удаление миниатюры
