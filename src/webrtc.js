@@ -138,6 +138,10 @@ function selectStream(producerId) {
 
     container.appendChild(mainVideo);
     videoMainContainer.appendChild(container);
+    // Явно запускаем воспроизведение после перемонтирования в DOM, т.к. autoplay срабатывает только при первой установке srcObject.
+    if (mainVideo.paused) {
+      mainVideo.play();
+    }
 
     // Обновить аудио индикатор
     updateAudioIndicator(producerId);
